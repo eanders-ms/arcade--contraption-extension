@@ -165,87 +165,87 @@ namespace contraption {
             // Init calculated values
             this.positionPrev = Vector.Clone(this.position);
             this.anglePrev = this.angle;
-            Body.SetParts(this, this.parts);
-            Body.SetVertices(this, this.vertices);
-            Body.SetStatic(this, this.isStatic);
-            Body.SetSleeping(this, this.isSleeping);
+            this.setParts(this.parts);
+            this.setVertices(this.vertices);
+            this.setStatic(this.isStatic);
+            this.setSleeping(this.isSleeping);
 
             Vertex.RotateInPlace(this.vertices, this.angle, this.position);
             Axes.RotateInPlace(this.axes, this.angle);
             this.bounds.update(this.vertices, this.velocity);
 
             // Allow override of some calculated values
-            Body.SetMass(this, options.mass || this.mass);
-            Body.SetInertia(this, options.inertia || this.inertia);
+            this.setMass(options.mass || this.mass);
+            this.setInertia(options.inertia || this.inertia);
         }
 
-        static SetMass(body: Body, mass: number) {
-            const moment = body.inertia / (body.mass / 6);
-            body.inertia = moment * (mass / 6);
-            body.inverseInertia = 1 / body.inertia;
+        setMass(mass: number) {
+            const moment = this.inertia / (this.mass / 6);
+            this.inertia = moment * (mass / 6);
+            this.inverseInertia = 1 / this.inertia;
 
-            body.mass = mass;
-            body.inverseMass = 1 / body.mass;
-            body.density = body.mass / body.area;
+            this.mass = mass;
+            this.inverseMass = 1 / this.mass;
+            this.density = this.mass / this.area;
         }
 
-        static SetDensity(body: Body, density: number) {
-            Body.SetMass(body, density * body.area);
-            body.density = density;
+        setDensity(density: number) {
+            this.setMass(density * this.area);
+            this.density = density;
         }
 
-        static SetInertia(body: Body, inertia: number) {
-            body.inertia = inertia;
-            body.inverseInertia = 1 / body.inertia;
+        setInertia(inertia: number) {
+            this.inertia = inertia;
+            this.inverseInertia = 1 / this.inertia;
         }
 
-        static SetVertices(body: Body, verts: Vertex[]) {
-            if (verts[0].body === body) {
-                body.vertices = verts;
+        setVertices(verts: Vertex[]) {
+            if (verts[0].body === this) {
+                this.vertices = verts;
             } else {
-                body.vertices = Vertex.Create(verts, body);
+                this.vertices = Vertex.Create(verts, this);
             }
 
             // Update properties
-            body.axes = Axes.FromVerts(body.vertices);
-            body.area = Vertex.Area(body.vertices);
-            Body.SetMass(body, body.density * body.area);
+            this.axes = Axes.FromVerts(this.vertices);
+            this.area = Vertex.Area(this.vertices);
+            this.setMass(this.density * this.area);
 
             // Orient vertices around the center of mass at origin
-            const centroid = Vertex.Centroid(body.vertices);
-            Vertex.TranslateInPlace(body.vertices, centroid, -1);
+            const centroid = Vertex.Centroid(this.vertices);
+            Vertex.TranslateInPlace(this.vertices, centroid, -1);
 
             // Update inertia while vertices are at origin
-            Body.SetInertia(body, Body._inertiaScale * Vertex.Inertia(body.vertices, body.mass));
+            this.setInertia(Body._inertiaScale * Vertex.Inertia(this.vertices, this.mass));
 
             // Translate to current position
-            Vertex.TranslateInPlace(body.vertices, body.position);
-            body.bounds.update(body.vertices, body.velocity);
+            Vertex.TranslateInPlace(this.vertices, this.position);
+            this.bounds.update(this.vertices, this.velocity);
         }
 
-        static SetPosition(body: Body, pos: Vector) {
-            const delta = Vector.SubToRef(pos, body.position);
-            body.positionPrev.x += delta.x;
-            body.positionPrev.y += delta.y;
+        setPosition(pos: Vector) {
+            const delta = Vector.SubToRef(pos, this.position);
+            this.positionPrev.x += delta.x;
+            this.positionPrev.y += delta.y;
         }
 
-        static SetParts(body: Body, parts: Body[], autoHull?: boolean) {
+        setParts(parts: Body[], autoHull?: boolean) {
             parts = parts.slice(0);
 
             // Ensure the first part is the parent body
-            body.parts = [];
-            body.parts.push(body);
-            body.parent = body;
+            this.parts = [];
+            this.parts.push(this);
+            this.parent = this;
 
             for (let i = 0; i < parts.length; ++i) {
                 const part = parts[i];
-                if (part !== body) {
-                    part.parent = body;
-                    body.parts.push(part);
+                if (part !== this) {
+                    part.parent = this;
+                    this.parts.push(part);
                 }
             }
 
-            if (body.parts.length === 1) return;
+            if (this.parts.length === 1) return;
 
             autoHull = typeof autoHull !== 'undefined' ? autoHull : true;
 
@@ -260,25 +260,25 @@ namespace contraption {
                 const hull = Vertex.Hull(verts);
                 const hullCenter = Vertex.Centroid(hull);
 
-                Body.SetVertices(body, hull);
-                Vertex.TranslateInPlace(body.vertices, hullCenter);
+                this.setVertices(hull);
+                Vertex.TranslateInPlace(this.vertices, hullCenter);
             }
 
-            const total = Body.SumPhysProperties(body);
+            const total = this.sumPhysProperties();
 
-            body.area = total.area;
-            body.parent = body;
-            body.position.x = total.center.x;
-            body.position.y = total.center.y;
-            body.positionPrev.x = total.center.x;
-            body.positionPrev.y = total.center.y;
+            this.area = total.area;
+            this.parent = this;
+            this.position.x = total.center.x;
+            this.position.y = total.center.y;
+            this.positionPrev.x = total.center.x;
+            this.positionPrev.y = total.center.y;
 
-            Body.SetMass(body, total.mass);
-            Body.SetInertia(body, total.inertia);
-            Body.SetPosition(body, total.center);
+            this.setMass(total.mass);
+            this.setInertia(total.inertia);
+            this.setPosition(total.center);
         }
 
-        static SumPhysProperties(body: Body): PhysProperties {
+        sumPhysProperties(): PhysProperties {
             const properties: PhysProperties = {
                 mass: 0,
                 area: 0,
@@ -286,8 +286,8 @@ namespace contraption {
                 center: new Vector()
             };
 
-            for (let i = body.parts.length === 1 ? 0 : 1; i < body.parts.length; ++i) {
-                const part = body.parts[i];
+            for (let i = this.parts.length === 1 ? 0 : 1; i < this.parts.length; ++i) {
+                const part = this.parts[i];
                 const mass = part.mass !== Infinity ? part.mass : 1;
 
                 properties.mass += mass;
@@ -301,9 +301,9 @@ namespace contraption {
             return properties;
         }
 
-        static SetStatic(body: Body, isStatic: boolean) {
-            for (let i = 0; i < body.parts.length; ++i) {
-                const part = body.parts[i];
+        setStatic(isStatic: boolean) {
+            for (let i = 0; i < this.parts.length; ++i) {
+                const part = this.parts[i];
 
                 if (part.isStatic === isStatic) continue;
                 part.isStatic = isStatic;
@@ -347,8 +347,8 @@ namespace contraption {
             }
         }
 
-        static SetSleeping(body: Body, isSleeping: boolean) {
-            Sleeping.set(body, isSleeping);
+        setSleeping(isSleeping: boolean) {
+            Sleeping.set(this, isSleeping);
         }
     }
 
