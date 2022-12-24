@@ -18,9 +18,31 @@ namespace contraption {
         vertices?: Vertex[];
         position?: Vector;
         isStatic?: boolean;
+        isSleeping?: boolean;
         mass?: number;
         inertia?: number;
+        density?: number;
+        velocity?: Vector;
+        angularVelocity?: number;
+        parts?: Body[];
     }
+
+    interface PhysProperties {
+        mass: number;
+        area: number;
+        inertia: number;
+        center: Vector;
+    };
+
+    interface DynamicProperties {
+        restitution: number;
+        friction: number;
+        mass: number;
+        inertia: number;
+        density: number;
+        inverseMass: number;
+        inverseInertia: number;
+    };
 
     export class Body {
         static _inertiaScale: number = 4;
@@ -53,6 +75,7 @@ namespace contraption {
         velocity: Vector;
         angularVelocity: number;
         sleepThreshold: number;
+        sleepCounter: number;
         density: number;
         restitution: number;
         friction: number;
@@ -78,18 +101,38 @@ namespace contraption {
         isSleeping: boolean;
         parts: Body[];
 
+        _dynamicProperties: DynamicProperties;
+
         constructor(options: BodyCreateOptions) {
             options = options || {};
 
-            this.angle = options.angle || 0;
-            this.vertices = options.vertices || Vertex.FromPath("L 0 0 L 40 0 L 40 40 L 0 40");
-            this.position = options.position || new Vector();
-            this.isStatic = options.isStatic || false;
-            this.mass = options.mass || 0;
-            this.inverseMass = this.mass ? 1 / this.mass : Infinity;
-            this.inertia = options.inertia || 0;
-            this.inverseInertia = 0; this.inertia ? 1 / this.inertia : Infinity;
+            // Fill in options
+            options.angle = options.angle || 0;
+            options.vertices = options.vertices || Vertex.FromPath("L 0 0 L 40 0 L 40 40 L 0 40");
+            options.position = options.position || new Vector();
+            options.isStatic = options.isStatic || false;
+            options.isSleeping = options.isSleeping || false;
+            options.mass = options.mass || 0;
+            options.inertia = options.inertia || 0;
+            options.density = options.density || 0.001;
+            options.velocity = options.velocity || new Vector();
+            options.angularVelocity = options.angularVelocity || 0;
+            options.parts = options.parts || [];
 
+            // Init from options
+            this.angle = options.angle;
+            this.vertices = options.vertices;
+            this.position = options.position;
+            this.isStatic = options.isStatic;
+            this.isSleeping = options.isSleeping;
+            this.mass = options.mass;
+            this.inertia = options.inertia;
+            this.density = options.density;
+            this.velocity = options.velocity;
+            this.angularVelocity = options.angularVelocity;
+            this.parts = options.parts;
+
+            // Init with defaults
             this.force = new Vector();
             this.torque = 0;
             this.positionImpulse = new Impulse(0, 0, 0);
@@ -100,6 +143,7 @@ namespace contraption {
             this.velocity = new Vector();
             this.angularVelocity = 0;
             this.sleepThreshold = 60;
+            this.sleepCounter = 0;
             this.density = 0.001;
             this.restitution = 0;
             this.friction = 0.1;
@@ -114,13 +158,25 @@ namespace contraption {
             this.area = 0;
             this.isSensor = false;
             this.isSleeping = false;
-
             this.bounds = new Bounds();
             this.axes = Axes.FromVerts(this.vertices);
+
+            // Init calculated values
+            this.positionPrev = Vector.Clone(this.position);
+            this.anglePrev = this.angle;
+            Body.SetParts(this, this.parts);
+            Body.SetVertices(this, this.vertices);
+            Body.SetStatic(this, this.isStatic);
+            Body.SetSleeping(this, this.isSleeping);
+            //Body.SetParent(this, this.parent);
 
             Vertex.RotateInPlace(this.vertices, this.angle, this.position);
             Axes.RotateInPlace(this.axes, this.angle);
             Bounds.Update(this.bounds, this.vertices, this.velocity);
+
+            // Allow override of some calculated values
+            Body.SetMass(this, options.mass || this.mass);
+            Body.SetInertia(this, options.inertia || this.inertia);
         }
 
         static SetMass(body: Body, mass: number) {
@@ -173,6 +229,127 @@ namespace contraption {
             body.positionPrev.y += delta.y;
         }
 
+        static SetParts(body: Body, parts: Body[], autoHull?: boolean) {
+            parts = parts.slice(0);
+
+            // Ensure the first part is the parent body
+            body.parts = [];
+            body.parts.push(body);
+            body.parent = body;
+
+            for (let i = 0; i < parts.length; ++i) {
+                const part = parts[i];
+                if (part !== body) {
+                    part.parent = body;
+                    body.parts.push(part);
+                }
+            }
+
+            if (body.parts.length === 1) return;
+
+            autoHull = typeof autoHull !== 'undefined' ? autoHull : true;
+
+            if (autoHull) {
+                let verts: Vertex[] = [];
+                for (let i = 0; i < parts.length; ++i) {
+                    verts = verts.concat(parts[i].vertices);
+                }
+
+                Vertex.ClockwiseSortInPlace(verts);
+
+                const hull = Vertex.Hull(verts);
+                const hullCenter = Vertex.Centroid(hull);
+
+                Body.SetVertices(body, hull);
+                Vertex.TranslateInPlace(body.vertices, hullCenter);
+            }
+
+            const total = Body.SumPhysProperties(body);
+
+            body.area = total.area;
+            body.parent = body;
+            body.position.x = total.center.x;
+            body.position.y = total.center.y;
+            body.positionPrev.x = total.center.x;
+            body.positionPrev.y = total.center.y;
+
+            Body.SetMass(body, total.mass);
+            Body.SetInertia(body, total.inertia);
+            Body.SetPosition(body, total.center);
+        }
+
+        static SumPhysProperties(body: Body): PhysProperties {
+            const properties: PhysProperties = {
+                mass: 0,
+                area: 0,
+                inertia: 0,
+                center: new Vector()
+            };
+
+            for (let i = body.parts.length === 1 ? 0 : 1; i < body.parts.length; ++i) {
+                const part = body.parts[i];
+                const mass = part.mass !== Infinity ? part.mass : 1;
+
+                properties.mass += mass;
+                properties.area += part.area;
+                properties.inertia += part.inertia;
+                properties.center = Vector.AddToRef(properties.center, Vector.MulToRef(part.position, mass));
+            }
+
+            properties.center = Vector.DivToRef(properties.center, properties.mass);
+
+            return properties;
+        }
+
+        static SetStatic(body: Body, isStatic: boolean) {
+            for (let i = 0; i < body.parts.length; ++i) {
+                const part = body.parts[i];
+
+                if (part.isStatic === isStatic) continue;
+                part.isStatic = isStatic;
+
+                if (isStatic) {
+                    part._dynamicProperties = {
+                        restitution: part.restitution,
+                        friction: part.friction,
+                        mass: part.mass,
+                        inertia: part.inertia,
+                        density: part.density,
+                        inverseMass: part.inverseMass,
+                        inverseInertia: part.inverseInertia
+                    };
+
+                    part.restitution = 0;
+                    part.friction = 1;
+                    part.mass = part.inertia = part.density = Infinity;
+                    part.inverseMass = part.inverseInertia = 0;
+
+                    part.positionPrev.x = part.position.x;
+                    part.positionPrev.y = part.position.y;
+                    part.anglePrev = part.angle;
+                    part.angularVelocity = 0;
+                    part.speed = 0;
+                    part.angularSpeed = 0;
+                    part.velocity.x = 0;
+                    part.velocity.y = 0;
+                } else if (part._dynamicProperties) {
+                    const d = part._dynamicProperties;
+                    part.restitution = d.restitution;
+                    part.friction = d.friction;
+                    part.mass = d.mass;
+                    part.inertia = d.inertia;
+                    part.density = d.density;
+                    part.inverseMass = d.inverseMass;
+                    part.inverseInertia = d.inverseInertia;
+
+                    part._dynamicProperties = null;
+                }
+            }
+        }
+
+        static SetSleeping(body: Body, isSleeping: boolean) {
+            Sleeping.set(body, isSleeping);
+        }
     }
 
 }

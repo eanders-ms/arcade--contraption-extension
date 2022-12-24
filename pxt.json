@@ -14,7 +14,11 @@
         "vertices.ts",
         "vector.ts",
         "bounds.ts",
-        "axes.ts"
+        "axes.ts",
+        "sleeping.ts",
+        "events.ts",
+        "runner.ts",
+        "engine.ts"
     ],
     "testFiles": [
         "test.ts"
