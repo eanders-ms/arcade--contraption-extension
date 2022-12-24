@@ -64,7 +64,7 @@ namespace contraption {
             };
         }
 
-        static Update(engine: Engine, delta: number, correction: number) {
+        update(delta: number, correction: number) {
             
         }
     }

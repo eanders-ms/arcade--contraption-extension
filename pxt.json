@@ -20,7 +20,10 @@
         "runner.ts",
         "engine.ts",
         "world.ts",
-        "constraint.ts"
+        "constraint.ts",
+        "collision.ts",
+        "pair.ts",
+        "contact.ts"
     ],
     "testFiles": [
         "test.ts"

@@ -51,48 +51,46 @@ namespace contraption {
 
         }
 
-        static Tick(runner: Runner, engine: Engine, time: number) {
+        tick(engine: Engine, time: number) {
             let delta: number;
             let correction: number;
             let timing = engine.timing;
 
-            if (runner.isFixed) {
-                delta = runner.delta;
+            if (this.isFixed) {
+                delta = this.delta;
             } else {
-                delta = (time - runner.timePrev) || runner.delta;
-                runner.timePrev = time;
+                delta = (time - this.timePrev) || this.delta;
+                this.timePrev = time;
 
-                runner.deltaHistory.push(delta);
-                runner.deltaHistory = runner.deltaHistory.slice(-runner.deltaSampleSize);
-                delta = runner.deltaHistory.reduce((p, c) => Math.min(p, c), Infinity);
+                this.deltaHistory.push(delta);
+                this.deltaHistory = this.deltaHistory.slice(-this.deltaSampleSize);
+                delta = this.deltaHistory.reduce((p, c) => Math.min(p, c), Infinity);
 
-                delta = delta < runner.deltaMin ? runner.deltaMin : delta;
-                delta = delta > runner.deltaMax ? runner.deltaMax : delta;
+                delta = delta < this.deltaMin ? this.deltaMin : delta;
+                delta = delta > this.deltaMax ? this.deltaMax : delta;
 
-                correction = delta / runner.delta;
+                correction = delta / this.delta;
 
-                runner.delta = delta;
+                this.delta = delta;
             }
 
-            if (runner.timeScalePrev !== 0)
-                correction *= timing.timeScale / runner.timeScalePrev;
+            if (this.timeScalePrev !== 0)
+                correction *= timing.timeScale / this.timeScalePrev;
 
             if (timing.timeScale === 0)
                 correction = 0;
 
-            runner.timeScalePrev = timing.timeScale;
-            runner.correction = correction;
+            this.timeScalePrev = timing.timeScale;
+            this.correction = correction;
 
-            runner.frameCounter += 1;
-            if (time - runner.counterTimestamp >= 1000) {
-                runner.fps = runner.frameCounter * ((time - runner.counterTimestamp) / 1000);
-                runner.counterTimestamp = time;
-                runner.frameCounter = 0;
+            this.frameCounter += 1;
+            if (time - this.counterTimestamp >= 1000) {
+                this.fps = this.frameCounter * ((time - this.counterTimestamp) / 1000);
+                this.counterTimestamp = time;
+                this.frameCounter = 0;
             }
 
-            Engine.Update(engine, delta, correction);
+            engine.update(delta, correction);
         }
-
     }
-
 }
