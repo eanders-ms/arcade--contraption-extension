@@ -133,6 +133,7 @@ namespace contraption {
             this.parts = options.parts;
 
             // Init with defaults
+            this.id = Common.nextId();
             this.force = new Vector();
             this.torque = 0;
             this.positionImpulse = new Impulse(0, 0, 0);
@@ -168,11 +169,10 @@ namespace contraption {
             Body.SetVertices(this, this.vertices);
             Body.SetStatic(this, this.isStatic);
             Body.SetSleeping(this, this.isSleeping);
-            //Body.SetParent(this, this.parent);
 
             Vertex.RotateInPlace(this.vertices, this.angle, this.position);
             Axes.RotateInPlace(this.axes, this.angle);
-            Bounds.Update(this.bounds, this.vertices, this.velocity);
+            this.bounds.update(this.vertices, this.velocity);
 
             // Allow override of some calculated values
             Body.SetMass(this, options.mass || this.mass);
@@ -220,7 +220,7 @@ namespace contraption {
 
             // Translate to current position
             Vertex.TranslateInPlace(body.vertices, body.position);
-            Bounds.Update(body.bounds, body.vertices, body.velocity);
+            body.bounds.update(body.vertices, body.velocity);
         }
 
         static SetPosition(body: Body, pos: Vector) {

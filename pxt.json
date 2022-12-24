@@ -18,7 +18,9 @@
         "sleeping.ts",
         "events.ts",
         "runner.ts",
-        "engine.ts"
+        "engine.ts",
+        "world.ts",
+        "constraint.ts"
     ],
     "testFiles": [
         "test.ts"
