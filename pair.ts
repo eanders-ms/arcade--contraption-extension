@@ -21,7 +21,7 @@ namespace contraption {
         constructor(collision: Collision, timestamp: number) {
             const bodyA = collision.bodyA;
             const bodyB = collision.bodyB;
-            this.id = Common.nextId();
+            this.id = Pair.Id(bodyA, bodyB);
             this.bodyA = bodyA;
             this.bodyB = bodyB;
             this.collision = collision;
@@ -73,6 +73,14 @@ namespace contraption {
                 } else {
                     activeContacts.push(contacts[contactId] = new Contact(support));
                 }
+            }
+        }
+
+        static Id(bodyA: Body, bodyB: Body): number {
+            if (bodyA.id < bodyB.id) {
+                return 'A' + bodyA.id + 'B' + bodyB.id;
+            } else {
+                return 'A' + bodyB.id + 'B' + bodyA.id;
             }
         }
     }

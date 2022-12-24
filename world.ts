@@ -16,7 +16,7 @@ namespace contraption {
             allWorlds: World[];
         };
 
-        constructor(options: WorldOptions) {
+        constructor(options?: WorldOptions) {
             options = options || {};
 
             this.id = Common.nextId();

@@ -55,7 +55,7 @@ namespace contraption {
             }
 
             // reuse collision records for gc efficiency
-            let pair = pairs && pairs.table[Pair.id(bodyA, bodyB)];
+            let pair = pairs && pairs.table[Pair.Id(bodyA, bodyB)];
             let collision: Collision;
 
             if (!pair) {
@@ -141,11 +141,12 @@ namespace contraption {
         }
 
         static OverlapAxes(result: Overlap, vertsA: Vertex[], vertsB: Vertex[], axes: Vector[]) {
-
+            // TODO
         }
 
         static FindSupports(bodyA: Body, bodyB: Body, normal: Vector, direction: number): Vector[] {
-
+            // TODO
+            return [];
         }
     }
 }

@@ -23,7 +23,9 @@
         "constraint.ts",
         "collision.ts",
         "pair.ts",
-        "contact.ts"
+        "contact.ts",
+        "pairs.ts",
+        "detector.ts"
     ],
     "testFiles": [
         "test.ts"
