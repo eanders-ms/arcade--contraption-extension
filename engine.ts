@@ -64,7 +64,9 @@ namespace contraption {
             };
         }
 
-        update(delta?: number, correction?: number) {
+        update(delta?: number, correction?: number): this {
+            const startTime = Common.now();
+
             delta = delta || 1000 / 60;
             correction = correction || 1;
 
@@ -79,22 +81,92 @@ namespace contraption {
 
             // Events.trigger(this, 'beforeUpdate', event);
 
+            // Get all bodies and all constraints in the world
             const allBodies = world.allBodies();
             const allConstraints = world.allConstraints();
 
+            // Update the detector bodies if they have changed
             if (world.isModified) {
                 detector.setBodies(allBodies);
             }
 
+            // reset all composite modified flags
             if (world.isModified) {
                 world.setModified(false, false, true);
             }
 
+            // Update sleeping if enabled
             if (this.enableSleeping) {
-                Sleeping.update(allBodies, timing.timeScale);
+                Sleeping.Update(allBodies, timing.timeScale);
             }
 
+            // Apply gravity to all bodies
             Engine.BodiesApplyGravity(allBodies, this.gravity);
+
+            // Update all body position and rotation by integration
+            Engine.BodiesUpdate(allBodies, delta, timing.timeScale, correction);
+
+            // Update all constraints (first pass)
+            Constraint.PreSolveAll(allBodies);
+            for (let i = 0; i < this.constraintIterations; ++i) {
+                Constraint.SolveAll(allConstraints, timing.timeScale);
+            }
+            Constraint.PostSolveAll(allBodies);
+
+            // Find all collisions
+            detector.pairs = this.pairs;
+            const collisions = detector.collisions();
+
+            // Update collision Pairs
+            pairs.update(collisions, timestamp);
+
+            // Wake up bodies involved in collisions
+            if (this.enableSleeping) {
+                Sleeping.AfterCollisions(pairs.list, timing.timeScale);
+            }
+
+            // Trigger collision events
+            if (pairs.collisionStart.length > 0) {
+                // Events.trigger(this, 'collisionStart, { pairs: pairs.collisionStart })
+            }
+
+            // Iteratively resolve position between collisions
+            Resolver.PreSolvePosition(pairs.list);
+            for (let i = 0; i < this.positionIterations; ++i) {
+                Resolver.SolvePosition(pairs.list, timing.timeScale);
+            }
+            Resolver.PostSolvePosition(allBodies);
+
+            // Update all constraints (second pass)
+            Constraint.PreSolveAll(allBodies);
+            for (let i = 0; i < this.constraintIterations; ++i) {
+                Constraint.SolveAll(allConstraints, timing.timeScale);
+            }
+            Constraint.PostSolveAll(allBodies);
+
+            // Iteratively resolve velocity between collisions
+            Resolver.PreSolveVelocity(pairs.list);
+            for (let i = 0; i < this.velocityIterations; i++) {
+                Resolver.SolveVelocity(pairs.list, timing.timeScale);
+            }
+
+            // Trigger collision events
+            if (pairs.collisionActive.length > 0) {
+                // Events.trigger(this, 'collisionActive', { pairs: pairs.collisionActive });
+            }
+            if (pairs.collisionEnd.length > 0) {
+                // Events.trigger(this, 'collisionEnd', { pairs: pairs.collisionEnd });
+            }
+
+            // Clear force buffers
+            Engine.BodiesClearForces(allBodies);
+
+            // Events.trigger(this, 'afterUpdate', event);
+
+            // Log the time elapsed computing this update
+            this.timing.lastElapsed = Common.now() - startTime;
+
+            return this;
         }
 
         static BodiesApplyGravity(bodies: Body[], gravity: Gravity) {
@@ -116,7 +188,7 @@ namespace contraption {
             }
         }
 
-        static BodiesUpdate(bodies: Body[], deltaTime: number, timeScale: number, correction: number, worldBounds: Bounds) {
+        static BodiesUpdate(bodies: Body[], deltaTime: number, timeScale: number, correction: number) {
             for (let i = 0; i < bodies.length; ++i) {
                 const body = bodies[i];
 
@@ -125,6 +197,17 @@ namespace contraption {
 
                 body.update(deltaTime, timeScale, correction);
             }
-        };
+        }
+
+        static BodiesClearForces(bodies: Body[]) {
+            for (let i = 0; i < bodies.length; i++) {
+                const body = bodies[i];
+
+                // reset force buffers
+                body.force.x = 0;
+                body.force.y = 0;
+                body.torque = 0;
+            }
+        }
     }
 }

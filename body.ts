@@ -100,6 +100,7 @@ namespace contraption {
         isSensor: boolean;
         isSleeping: boolean;
         parts: Body[];
+        motion: number;
 
         _dynamicProperties: DynamicProperties;
 
@@ -161,6 +162,7 @@ namespace contraption {
             this.isSleeping = false;
             this.bounds = new Bounds();
             this.axes = Axes.FromVerts(this.vertices);
+            this.motion = 0;
 
             // Init calculated values
             this.positionPrev = Vector.Clone(this.position);
@@ -242,7 +244,7 @@ namespace contraption {
             this.anglePrev += delta;
 
             for (let i = 0; i < this.parts.length; ++i) {
-                var part = this.parts[i];
+                const part = this.parts[i];
                 part.angle += delta;
                 Vertex.RotateInPlace(part.vertices, delta, this.position);
                 Axes.RotateInPlace(part.axes, delta);
@@ -347,6 +349,7 @@ namespace contraption {
                     part.angularSpeed = 0;
                     part.velocity.x = 0;
                     part.velocity.y = 0;
+                    part.motion = 0;
                 } else if (part._dynamicProperties) {
                     const d = part._dynamicProperties;
                     part.restitution = d.restitution;
@@ -363,7 +366,7 @@ namespace contraption {
         }
 
         setSleeping(isSleeping: boolean) {
-            Sleeping.set(this, isSleeping);
+            Sleeping.Set(this, isSleeping);
         }
 
         sumPhysProperties(): PhysProperties {
@@ -417,7 +420,7 @@ namespace contraption {
 
             point = point || this.position;
 
-            for (var i = 0; i < this.parts.length; i++) {
+            for (let i = 0; i < this.parts.length; i++) {
                 const part = this.parts[i];
 
                 // scale vertices
@@ -431,7 +434,7 @@ namespace contraption {
                 // update inertia (requires vertices to be at origin)
                 Vertex.TranslateInPlace(part.vertices, new Vector(-part.position.x, -part.position.y));
                 part.setInertia(Body._inertiaScale * Vertex.Inertia(part.vertices, part.mass));
-                Vertex.TranslateInPlace(part.vertices, new Vector(part.position.x, y: part.position.y));
+                Vertex.TranslateInPlace(part.vertices, new Vector(part.position.x, part.position.y));
 
                 if (i > 0) {
                     totalArea += part.area;
@@ -443,32 +446,84 @@ namespace contraption {
                 part.position.y = point.y + (part.position.y - point.y) * scaleY;
 
                 // update bounds
-                part.bounds.update(part.vertices, body.velocity);
+                part.bounds.update(part.vertices, this.velocity);
             }
 
             // handle parent body
-            if (body.parts.length > 1) {
-                body.area = totalArea;
+            if (this.parts.length > 1) {
+                this.area = totalArea;
 
-                if (!body.isStatic) {
-                    Body.setMass(body, body.density * totalArea);
-                    Body.setInertia(body, totalInertia);
+                if (!this.isStatic) {
+                    this.setMass(this.density * totalArea);
+                    this.setInertia(totalInertia);
                 }
             }
 
             // handle circles
-            if (body.circleRadius) {
+            if (this.circleRadius) {
                 if (scaleX === scaleY) {
-                    body.circleRadius *= scaleX;
+                    this.circleRadius *= scaleX;
                 } else {
                     // body is no longer a circle
-                    body.circleRadius = null;
+                    this.circleRadius = null;
                 }
             }
         }
 
         update(deltaTime: number, timeScale: number, correction: number) {
+            const deltaTimeSquared = Math.pow(deltaTime * timeScale * this.timeScale, 2);
+
+            // from the previous step
+            const frictionAir = 1 - this.frictionAir * timeScale * this.timeScale,
+                velocityPrevX = this.position.x - this.positionPrev.x,
+                velocityPrevY = this.position.y - this.positionPrev.y;
+
+            // update velocity with Verlet integration
+            this.velocity.x = (velocityPrevX * frictionAir * correction) + (this.force.x / this.mass) * deltaTimeSquared;
+            this.velocity.y = (velocityPrevY * frictionAir * correction) + (this.force.y / this.mass) * deltaTimeSquared;
+
+            this.positionPrev.x = this.position.x;
+            this.positionPrev.y = this.position.y;
+            this.position.x += this.velocity.x;
+            this.position.y += this.velocity.y;
+
+            // update angular velocity with Verlet integration
+            this.angularVelocity = ((this.angle - this.anglePrev) * frictionAir * correction) + (this.torque / this.inertia) * deltaTimeSquared;
+            this.anglePrev = this.angle;
+            this.angle += this.angularVelocity;
+
+            // track speed and acceleration
+            this.speed = Vector.Magnitude(this.velocity);
+            this.angularSpeed = Math.abs(this.angularVelocity);
+
+            // transform the body geometry
+            for (let i = 0; i < this.parts.length; i++) {
+                const part = this.parts[i];
+
+                Vertex.TranslateInPlace(part.vertices, this.velocity);
+
+                if (i > 0) {
+                    part.position.x += this.velocity.x;
+                    part.position.y += this.velocity.y;
+                }
+
+                if (this.angularVelocity !== 0) {
+                    Vertex.RotateInPlace(part.vertices, this.angularVelocity, this.position);
+                    Axes.RotateInPlace(part.axes, this.angularVelocity);
+                    if (i > 0) {
+                        Vector.RotateAroundToRef(part.position, this.angularVelocity, this.position, part.position);
+                    }
+                }
+
+                part.bounds.update(part.vertices, this.velocity);
+            }
+        }
+
+        applyForce(position: Vector, force: Vector) {
+            this.force.x += force.x;
+            this.force.y += force.y;
+            const offset = new Vector(position.x - this.position.x, position.y - this.position.y);
+            this.torque += offset.x * force.y - offset.y * force.x;
         }
     }
-
 }

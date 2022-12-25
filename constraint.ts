@@ -94,7 +94,7 @@ namespace contraption {
                     continue;
                 }
 
-                Sleeping.set(body, false);
+                Sleeping.Set(body, false);
 
                 // update geometry and reset
                 for (let j = 0; j < body.parts.length; j++) {
