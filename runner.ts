@@ -43,15 +43,18 @@ namespace contraption {
             this.enabled = true;
         }
 
-        static Start(runner: Runner, engine: Engine) {
-
+        // @returns `stop` method
+        start(engine: Engine): () => void {
+            const tick = () => this.tick(engine);
+            const cb = control.eventContext().registerFrameHandler(scene.PHYSICS_PRIORITY, tick);
+            return () => {
+                control.eventContext().unregisterFrameHandler(cb);
+            }
         }
 
-        static Stop(runner: Runner) {
+        tick(engine: Engine) {
+            const time = Common.now();
 
-        }
-
-        tick(engine: Engine, time: number) {
             let delta: number;
             let correction: number;
             let timing = engine.timing;

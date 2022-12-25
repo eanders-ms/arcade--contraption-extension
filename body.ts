@@ -104,7 +104,7 @@ namespace contraption {
 
         _dynamicProperties: DynamicProperties;
 
-        constructor(options: BodyCreateOptions) {
+        constructor(options?: BodyCreateOptions) {
             options = options || {};
 
             // Fill in options
