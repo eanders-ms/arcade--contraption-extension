@@ -32,50 +32,83 @@ namespace contraption {
             };
         }
 
-        static SetModified(world: World, isModified: boolean, updateParents: boolean, updateChildren: boolean) {
-            world.isModified = isModified;
+        setModified(isModified: boolean, updateParents: boolean, updateChildren: boolean) {
+            this.isModified = isModified;
 
-            if (isModified && world.cache) {
-                world.cache.allBodies = null;
-                world.cache.allConstraints = null;
-                world.cache.allWorlds = null;
+            if (isModified && this.cache) {
+                this.cache.allBodies = null;
+                this.cache.allConstraints = null;
+                this.cache.allWorlds = null;
             }
 
-            if (updateParents && world.parent) {
-                // TODO
+            if (updateParents && this.parent) {
+                // TODO: update parent worlds
             }
 
             if (updateChildren) {
-                // TODO
+                // TODO: update child worlds
             }
         }
 
-        static AddBody(world: World, body: Body): World {
-            world.bodies.push(body);
-            World.SetModified(world, true, true, false);            
-            return world;
+        addBody(body: Body): this {
+            this.bodies.push(body);
+            this.setModified(true, true, false);
+            return this;
         }
 
-        static RemoveBody(world: World, body: Body, deep?: boolean): World {
-            const index = world.bodies.indexOf(body);
+        removeBody(body: Body, deep?: boolean): this {
+            const index = this.bodies.indexOf(body);
             if (index !== -1) {
-                World.RemoveBodyAt(world, index);
+                this.removeBodyAt(index);
             }
 
             if (deep) {
-                // TODO, recurse into children
+                // TODO: recurse into children
             }
 
-            return world;
+            return this;
         }
 
-        static RemoveBodyAt(world: World, index: number): World {
-            world.bodies.splice(index, 1);
-            World.SetModified(world, true, true, false);
-            return world;
+        removeBodyAt(index: number): this {
+            this.bodies.splice(index, 1);
+            this.setModified(true, true, false);
+            return this;
         }
 
+        allBodies(): Body[] {
+            if (this.cache && this.cache.allBodies) {
+                return this.cache.allBodies;
+            }
 
+            const bodies = [].concat(this.bodies);
+
+            for (let i = 0; i < this.worlds.length; ++i) {
+                // TODO: concat sub-world bodies
+            }
+
+            if (this.cache) {
+                this.cache.allBodies = bodies;
+            }
+
+            return bodies;
+        }
         
+        allConstraints(): Constraint[] {
+            if (this.cache && this.cache.allConstraints) {
+                return this.cache.allConstraints;
+            }
+
+            const constraints = [].concat(this.constraints);
+
+            for (let i = 0; i < this.worlds.length; ++i) {
+                // TODO: concat sub-world constraints
+            }
+
+            if (this.cache) {
+                this.cache.allConstraints = constraints;
+            }
+
+            return constraints;
+        }
     }
 }

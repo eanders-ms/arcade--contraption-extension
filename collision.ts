@@ -5,7 +5,7 @@ namespace contraption {
     }
 
     export class Collision {
-        static _supports: any[] = [];
+        static _supports: Vector[] = [];
         static _overlapAB: Overlap = {
             overlap: 0,
             axis: null
@@ -25,7 +25,7 @@ namespace contraption {
         normal: Vector;
         tangent: Vector;
         penetration: Vector;
-        supports: any[];
+        supports: Vector[];
 
         constructor(bodyA: Body, bodyB: Body) {
             this.pair = null;

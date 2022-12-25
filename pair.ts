@@ -64,7 +64,7 @@ namespace contraption {
             this.activeContacts = activeContacts = [];
 
             for (let i = 0; i < supports.length; ++i) {
-                const support = supports[i];
+                const support = supports[i] as Vertex;
                 const contactId = support.body === parentA ? support.index : parentAVerticesLength + support.index;
                 const contact = contacts[contactId];
 
@@ -78,9 +78,9 @@ namespace contraption {
 
         static Id(bodyA: Body, bodyB: Body): number {
             if (bodyA.id < bodyB.id) {
-                return 'A' + bodyA.id + 'B' + bodyB.id;
+                return Common.hashCode('A' + bodyA.id + 'B' + bodyB.id);
             } else {
-                return 'A' + bodyB.id + 'B' + bodyA.id;
+                return Common.hashCode('A' + bodyB.id + 'B' + bodyA.id);
             }
         }
     }

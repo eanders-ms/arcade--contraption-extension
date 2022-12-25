@@ -64,8 +64,67 @@ namespace contraption {
             };
         }
 
-        update(delta: number, correction: number) {
-            
+        update(delta?: number, correction?: number) {
+            delta = delta || 1000 / 60;
+            correction = correction || 1;
+
+            const world = this.world;
+            const detector = this.detector;
+            const pairs = this.pairs;
+            const timing = this.timing;
+            const timestamp = timing.timestamp;
+
+            timing.timestamp += delta * timing.timeScale;
+            timing.lastDelta = delta * timing.timeScale;
+
+            // Events.trigger(this, 'beforeUpdate', event);
+
+            const allBodies = world.allBodies();
+            const allConstraints = world.allConstraints();
+
+            if (world.isModified) {
+                detector.setBodies(allBodies);
+            }
+
+            if (world.isModified) {
+                world.setModified(false, false, true);
+            }
+
+            if (this.enableSleeping) {
+                Sleeping.update(allBodies, timing.timeScale);
+            }
+
+            Engine.BodiesApplyGravity(allBodies, this.gravity);
         }
+
+        static BodiesApplyGravity(bodies: Body[], gravity: Gravity) {
+            const gravityScale = typeof gravity.scale !== 'undefined' ? gravity.scale : 0.001;
+
+            if ((gravity.x === 0 && gravity.y === 0) || gravityScale === 0) {
+                return;
+            }
+
+            for (let i = 0; i < bodies.length; ++i) {
+                const body = bodies[i];
+
+                if (body.isStatic || body.isSleeping)
+                    continue;
+
+                // apply gravity
+                body.force.y += body.mass * gravity.y * gravityScale;
+                body.force.x += body.mass * gravity.x * gravityScale;
+            }
+        }
+
+        static BodiesUpdate(bodies: Body[], deltaTime: number, timeScale: number, correction: number, worldBounds: Bounds) {
+            for (let i = 0; i < bodies.length; ++i) {
+                const body = bodies[i];
+
+                if (body.isStatic || body.isSleeping)
+                    continue;
+
+                body.update(deltaTime, timeScale, correction);
+            }
+        };
     }
 }

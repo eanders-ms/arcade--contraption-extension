@@ -227,6 +227,44 @@ namespace contraption {
             const delta = Vector.SubToRef(pos, this.position);
             this.positionPrev.x += delta.x;
             this.positionPrev.y += delta.y;
+
+            for (let i = 0; i < this.parts.length; ++i) {
+                const part = this.parts[i];
+                part.position.x += delta.x;
+                part.position.y += delta.y;
+                Vertex.TranslateInPlace(part.vertices, delta);
+                part.bounds.update(part.vertices, this.velocity);
+            }
+        }
+
+        setAngle(angle: number) {
+            const delta = angle - this.angle;
+            this.anglePrev += delta;
+
+            for (let i = 0; i < this.parts.length; ++i) {
+                var part = this.parts[i];
+                part.angle += delta;
+                Vertex.RotateInPlace(part.vertices, delta, this.position);
+                Axes.RotateInPlace(part.axes, delta);
+                part.bounds.update(part.vertices, this.velocity);
+                if (i > 0) {
+                    Vector.RotateAroundToRef(part.position, delta, this.position, part.position);
+                }
+            }
+        }
+
+        setVelocity(velocity: Vector) {
+            this.positionPrev.x = this.position.x - velocity.x;
+            this.positionPrev.y = this.position.y - velocity.y;
+            this.velocity.x = velocity.x;
+            this.velocity.y = velocity.y;
+            this.speed = Vector.Magnitude(this.velocity);
+        }
+
+        setAngularVelocity(velocity: number) {
+            this.anglePrev = this.angle - velocity;
+            this.angularVelocity = velocity;
+            this.angularSpeed = Math.abs(this.angularVelocity);
         }
 
         setParts(parts: Body[], autoHull?: boolean) {
@@ -278,29 +316,6 @@ namespace contraption {
             this.setPosition(total.center);
         }
 
-        sumPhysProperties(): PhysProperties {
-            const properties: PhysProperties = {
-                mass: 0,
-                area: 0,
-                inertia: 0,
-                center: new Vector()
-            };
-
-            for (let i = this.parts.length === 1 ? 0 : 1; i < this.parts.length; ++i) {
-                const part = this.parts[i];
-                const mass = part.mass !== Infinity ? part.mass : 1;
-
-                properties.mass += mass;
-                properties.area += part.area;
-                properties.inertia += part.inertia;
-                properties.center = Vector.AddToRef(properties.center, Vector.MulToRef(part.position, mass));
-            }
-
-            properties.center = Vector.DivToRef(properties.center, properties.mass);
-
-            return properties;
-        }
-
         setStatic(isStatic: boolean) {
             for (let i = 0; i < this.parts.length; ++i) {
                 const part = this.parts[i];
@@ -349,6 +364,110 @@ namespace contraption {
 
         setSleeping(isSleeping: boolean) {
             Sleeping.set(this, isSleeping);
+        }
+
+        sumPhysProperties(): PhysProperties {
+            const properties: PhysProperties = {
+                mass: 0,
+                area: 0,
+                inertia: 0,
+                center: new Vector()
+            };
+
+            for (let i = this.parts.length === 1 ? 0 : 1; i < this.parts.length; ++i) {
+                const part = this.parts[i];
+                const mass = part.mass !== Infinity ? part.mass : 1;
+
+                properties.mass += mass;
+                properties.area += part.area;
+                properties.inertia += part.inertia;
+                properties.center = Vector.AddToRef(properties.center, Vector.MulToRef(part.position, mass));
+            }
+
+            properties.center = Vector.DivToRef(properties.center, properties.mass);
+
+            return properties;
+        }
+
+        translate(translation: Vector) {
+            this.setPosition(Vector.AddToRef(this.position, translation));
+        }
+
+        rotate(rotation: number, point: Vector) {
+            if (!point) {
+                this.setAngle(this.angle + rotation);
+            } else {
+                const cos = Math.cos(rotation),
+                    sin = Math.sin(rotation),
+                    dx = this.position.x - point.x,
+                    dy = this.position.y - point.y;
+
+                this.setPosition(new Vector(
+                    point.x + (dx * cos - dy * sin),
+                    point.y + (dx * sin + dy * cos)
+                ));
+
+                this.setAngle(this.angle + rotation);
+            }
+        }
+
+        scale(scaleX: number, scaleY: number, point: Vector) {
+            let totalArea = 0,
+                totalInertia = 0;
+
+            point = point || this.position;
+
+            for (var i = 0; i < this.parts.length; i++) {
+                const part = this.parts[i];
+
+                // scale vertices
+                Vertex.ScaleInPlace(part.vertices, scaleX, scaleY, point);
+
+                // update properties
+                part.axes = Axes.FromVerts(part.vertices);
+                part.area = Vertex.Area(part.vertices);
+                part.setMass(this.density * part.area);
+
+                // update inertia (requires vertices to be at origin)
+                Vertex.TranslateInPlace(part.vertices, new Vector(-part.position.x, -part.position.y));
+                part.setInertia(Body._inertiaScale * Vertex.Inertia(part.vertices, part.mass));
+                Vertex.TranslateInPlace(part.vertices, new Vector(part.position.x, y: part.position.y));
+
+                if (i > 0) {
+                    totalArea += part.area;
+                    totalInertia += part.inertia;
+                }
+
+                // scale position
+                part.position.x = point.x + (part.position.x - point.x) * scaleX;
+                part.position.y = point.y + (part.position.y - point.y) * scaleY;
+
+                // update bounds
+                part.bounds.update(part.vertices, body.velocity);
+            }
+
+            // handle parent body
+            if (body.parts.length > 1) {
+                body.area = totalArea;
+
+                if (!body.isStatic) {
+                    Body.setMass(body, body.density * totalArea);
+                    Body.setInertia(body, totalInertia);
+                }
+            }
+
+            // handle circles
+            if (body.circleRadius) {
+                if (scaleX === scaleY) {
+                    body.circleRadius *= scaleX;
+                } else {
+                    // body is no longer a circle
+                    body.circleRadius = null;
+                }
+            }
+        }
+
+        update(deltaTime: number, timeScale: number, correction: number) {
         }
     }
 
