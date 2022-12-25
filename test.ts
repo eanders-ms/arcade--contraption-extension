@@ -5,6 +5,8 @@ const engine = new contraption.Engine();
 
 runner.start(engine);
 
-const body = new contraption.Body();
+const bodyA = new contraption.Body();
+const bodyB = new contraption.Body();
 
-engine.world.addBody(body);
+engine.world.addBody(bodyA);
+engine.world.addBody(bodyB);

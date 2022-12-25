@@ -141,12 +141,104 @@ namespace contraption {
         }
 
         static OverlapAxes(result: Overlap, vertsA: Vertex[], vertsB: Vertex[], axes: Vector[]) {
-            // TODO
+            let verticesALength = vertsA.length,
+                verticesBLength = vertsB.length,
+                verticesAX = vertsA[0].x,
+                verticesAY = vertsA[0].y,
+                verticesBX = vertsB[0].x,
+                verticesBY = vertsB[0].y,
+                axesLength = axes.length,
+                overlapMin = Infinity,
+                overlapAxisNumber = 0;
+
+            for (let i = 0; i < axesLength; ++i) {
+                let axis = axes[i],
+                    axisX = axis.x,
+                    axisY = axis.y,
+                    minA = verticesAX * axisX + verticesAY * axisY,
+                    minB = verticesBX * axisX + verticesBY * axisY,
+                    maxA = minA,
+                    maxB = minB;
+
+                for (let j = 1; j < verticesALength; j += 1) {
+                    const dot = vertsA[j].x * axisX + vertsA[j].y * axisY;
+
+                    if (dot > maxA) {
+                        maxA = dot;
+                    } else if (dot < minA) {
+                        minA = dot;
+                    }
+                }
+
+                for (let j = 1; j < verticesBLength; j += 1) {
+                    const dot = vertsB[j].x * axisX + vertsB[j].y * axisY;
+
+                    if (dot > maxB) {
+                        maxB = dot;
+                    } else if (dot < minB) {
+                        minB = dot;
+                    }
+                }
+
+                const overlapAB = maxA - minB;
+                const overlapBA = maxB - minA;
+                const overlap = overlapAB < overlapBA ? overlapAB : overlapBA;
+
+                if (overlap < overlapMin) {
+                    overlapMin = overlap;
+                    overlapAxisNumber = i;
+
+                    if (overlap <= 0) {
+                        // can not be intersecting
+                        break;
+                    }
+                }
+            }
+
+            result.axis = axes[overlapAxisNumber];
+            result.overlap = overlapMin;
         }
 
         static FindSupports(bodyA: Body, bodyB: Body, normal: Vector, direction: number): Vector[] {
-            // TODO
-            return [];
+            let vertices = bodyB.vertices,
+                verticesLength = vertices.length,
+                bodyAPositionX = bodyA.position.x,
+                bodyAPositionY = bodyA.position.y,
+                normalX = normal.x * direction,
+                normalY = normal.y * direction,
+                nearestDistance = Infinity;
+
+            let vertexA: Vertex, vertexB: Vertex, vertexC: Vertex;
+
+            // find deepest vertex relative to the axis
+            for (let j = 0; j < verticesLength; j += 1) {
+                vertexB = vertices[j];
+                let distance = normalX * (bodyAPositionX - vertexB.x) + normalY * (bodyAPositionY - vertexB.y);
+
+                // convex hill-climbing
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    vertexA = vertexB;
+                }
+            }
+
+            // measure next vertex
+            vertexC = vertices[(verticesLength + vertexA.index - 1) % verticesLength];
+            nearestDistance = normalX * (bodyAPositionX - vertexC.x) + normalY * (bodyAPositionY - vertexC.y);
+
+            // compare with previous vertex
+            vertexB = vertices[(vertexA.index + 1) % verticesLength];
+            if (normalX * (bodyAPositionX - vertexB.x) + normalY * (bodyAPositionY - vertexB.y) < nearestDistance) {
+                Collision._supports[0] = vertexA;
+                Collision._supports[1] = vertexB;
+
+                return Collision._supports;
+            }
+
+            Collision._supports[0] = vertexA;
+            Collision._supports[1] = vertexC;
+
+            return Collision._supports;
         }
     }
 }

@@ -17,6 +17,6 @@ namespace contraption.Common {
     }
 
     export function now(): number {
-        return control.millis();
+        return control.millis() / 1000;
     }
 }

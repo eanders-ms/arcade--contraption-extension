@@ -76,6 +76,16 @@ namespace contraption {
             }
         }
 
+        setActive(isActive: boolean, timestamp: number) {
+            if (isActive) {
+                this.isActive = true;
+                this.timeUpdated = timestamp;
+            } else {
+                this.isActive = false;
+                this.activeContacts.length = 0;
+            }
+        };
+
         static Id(bodyA: Body, bodyB: Body): number {
             if (bodyA.id < bodyB.id) {
                 return Common.hashCode('A' + bodyA.id + 'B' + bodyB.id);
