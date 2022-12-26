@@ -25,6 +25,7 @@ namespace contraption {
         velocity?: Vector;
         angularVelocity?: number;
         circleRadius?: number;
+        restitution?: number;
         parts?: Body[];
     }
 
@@ -120,6 +121,7 @@ namespace contraption {
             options.velocity = options.velocity || new Vector();
             options.angularVelocity = options.angularVelocity || 0;
             options.parts = options.parts || [];
+            options.restitution = options.restitution || 0;
 
             // Init from options
             this.angle = options.angle;
@@ -133,6 +135,7 @@ namespace contraption {
             this.velocity = options.velocity;
             this.angularVelocity = options.angularVelocity;
             this.parts = options.parts;
+            this.restitution = options.restitution;
 
             // Init with defaults
             this.id = Common.nextId();
@@ -148,7 +151,6 @@ namespace contraption {
             this.sleepThreshold = 60;
             this.sleepCounter = 0;
             this.density = 0.001;
-            this.restitution = 0;
             this.friction = 0.1;
             this.frictionStatic = 0.5;
             this.frictionAir = 0.01;

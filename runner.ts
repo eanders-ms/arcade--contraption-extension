@@ -46,9 +46,11 @@ namespace contraption {
         // @returns `stop` method
         start(engine: Engine): () => void {
             const tick = () => this.tick(engine);
-            const cb = control.eventContext().registerFrameHandler(scene.PHYSICS_PRIORITY, tick);
+            const updateCb = control.eventContext().registerFrameHandler(scene.PHYSICS_PRIORITY, () => this.tick(engine));
+            const renderCb = control.eventContext().registerFrameHandler(scene.RENDER_SPRITES_PRIORITY, () => this.render(engine));
             return () => {
-                control.eventContext().unregisterFrameHandler(cb);
+                control.eventContext().unregisterFrameHandler(updateCb);
+                control.eventContext().unregisterFrameHandler(renderCb);
             }
         }
 
@@ -94,6 +96,24 @@ namespace contraption {
             }
 
             engine.update(delta, correction);
+        }
+
+        render(engine: Engine) {
+            const bodies = engine.world.allBodies();
+
+            for (let i = 0; i < bodies.length; ++i) {
+                const body = bodies[i];
+                const vertices = body.vertices;
+
+                let color = body.isStatic ? 6 : 5;
+
+                for (let j = 0; j < vertices.length; ++j) {
+                    const vertA = vertices[j];
+                    const vertB = vertices[(j + 1) % vertices.length];
+
+                    screen.drawLine(vertA.x, vertA.y, vertB.x, vertB.y, color);
+                }
+            }
         }
     }
 }
