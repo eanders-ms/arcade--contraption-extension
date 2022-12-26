@@ -24,6 +24,7 @@ namespace contraption {
         density?: number;
         velocity?: Vector;
         angularVelocity?: number;
+        circleRadius?: number;
         parts?: Body[];
     }
 

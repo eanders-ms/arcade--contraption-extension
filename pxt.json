@@ -26,7 +26,8 @@
         "contact.ts",
         "pairs.ts",
         "detector.ts",
-        "resolver.ts"
+        "resolver.ts",
+        "bodies.ts"
     ],
     "testFiles": [
         "test.ts"

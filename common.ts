@@ -19,4 +19,9 @@ namespace contraption.Common {
     export function now(): number {
         return control.millis() / 1000;
     }
+
+    export function round(value: number, decimals: number): number {
+        const aux = Math.pow(10, decimals);
+        return Math.round(value * aux) / aux;
+    }
 }
