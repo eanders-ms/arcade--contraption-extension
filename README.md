@@ -1,4 +1,9 @@
- 
+
+
+This is a recasting of [Matter.js](https://github.com/liabru/matter-js) to MakeCode Arcade. Not yet supported:
+* Nested worlds
+* Triggering of events
+
 
 
 > Open this page at [https://eanders-ms.github.io/arcade--contraption-extension/](https://eanders-ms.github.io/arcade--contraption-extension/)

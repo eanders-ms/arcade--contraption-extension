@@ -1,8 +1,8 @@
 namespace contraption {
     export class Sleeping {
 
-        static _motionWakeThreshold = 0.3;
-        static _motionSleepThreshold = 0.2;
+        static _motionWakeThreshold = 0.4;
+        static _motionSleepThreshold = 0.35;
         static _minBias = 0.9;
 
         static Set(body: Body, isSleeping: boolean) {

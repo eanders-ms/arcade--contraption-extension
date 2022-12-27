@@ -1,10 +1,10 @@
 namespace contraption {
     export class Resolver {
         static _restingThresh = 4;
-        static _restingThreshTangent = 6;
+        static _restingThreshTangent = 8;
         static _positionDampen = 0.9;
         static _positionWarming = 0.8;
-        static _frictionNormalMultiplier = 5;
+        static _frictionNormalMultiplier = 100;
 
         static PreSolvePosition(pairs: Pair[]) {
             // find total contacts on each body
