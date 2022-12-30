@@ -199,6 +199,16 @@ namespace contraption {
             return Math.abs(area) / 2;
         }
 
+        static ClockwiseSortInPlace(verts: Vector[]): Vector[] {
+            const center = Vector.Average(verts);
+
+            verts = verts.sort(function (vertA, vertB) {
+                return Vector.Angle(center, vertA) - Vector.Angle(center, vertB);
+            });
+
+            return verts;
+        }
+
         // Similar to https://www.nayuki.io/res/convex-hull-algorithm/convex-hull.ts
         static Hull(vertices: Vector[]): Vector[] {
             const upper: Vector[] = [];

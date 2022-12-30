@@ -223,12 +223,14 @@ namespace contraption {
             // Orient vertices around the center of mass at origin
             const centroid = Vertex.Centroid(this.vertices);
             Vertex.TranslateInPlace(this.vertices, centroid, -1);
+            Vector.TranslateInPlace(this.extraPoints, centroid, -1);
 
             // Update inertia while vertices are at origin
             this.setInertia(Body._inertiaScale * Vertex.Inertia(this.vertices, this.mass));
 
             // Translate to current position
             Vertex.TranslateInPlace(this.vertices, this.position);
+            Vector.TranslateInPlace(this.extraPoints, this.position);
             this.bounds.update(this.vertices, this.velocity);
         }
 
