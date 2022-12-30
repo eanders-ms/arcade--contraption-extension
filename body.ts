@@ -16,6 +16,7 @@ namespace contraption {
     export interface BodyCreateOptions {
         angle?: number;
         vertices?: Vertex[];
+        extraPoints?: Vector[];
         position?: Vector;
         isStatic?: boolean;
         isSleeping?: boolean;
@@ -66,6 +67,7 @@ namespace contraption {
         id: number;
         angle: number;
         vertices: Vertex[];
+        extraPoints: Vector[]; // extra points to keep around and transform along with the vertices
         position: Vector;
         force: Vector;
         torque: number;
@@ -112,6 +114,7 @@ namespace contraption {
             // Fill in options
             options.angle = options.angle || 0;
             options.vertices = options.vertices || Vertex.FromPath("L 0 0 L 40 0 L 40 40 L 0 40");
+            options.extraPoints = options.extraPoints || [];
             options.position = options.position || new Vector();
             options.isStatic = options.isStatic || false;
             options.isSleeping = options.isSleeping || false;
@@ -126,6 +129,7 @@ namespace contraption {
             // Init from options
             this.angle = options.angle;
             this.vertices = options.vertices;
+            this.extraPoints = options.extraPoints;
             this.position = options.position;
             this.isStatic = options.isStatic;
             this.isSleeping = options.isSleeping;
@@ -238,6 +242,7 @@ namespace contraption {
                 part.position.x += delta.x;
                 part.position.y += delta.y;
                 Vertex.TranslateInPlace(part.vertices, delta);
+                Vector.TranslateInPlace(part.extraPoints, delta);
                 part.bounds.update(part.vertices, this.velocity);
             }
         }
@@ -250,6 +255,7 @@ namespace contraption {
                 const part = this.parts[i];
                 part.angle += delta;
                 Vertex.RotateInPlace(part.vertices, delta, this.position);
+                Vector.RotateInPlace(part.extraPoints, delta, this.position);
                 Axes.RotateInPlace(part.axes, delta);
                 part.bounds.update(part.vertices, this.velocity);
                 if (i > 0) {
@@ -428,6 +434,7 @@ namespace contraption {
 
                 // scale vertices
                 Vertex.ScaleInPlace(part.vertices, scaleX, scaleY, point);
+                Vector.ScaleInPlace(part.extraPoints, scaleX, scaleY, point);
 
                 // update properties
                 part.axes = Axes.FromVerts(part.vertices);
@@ -504,6 +511,7 @@ namespace contraption {
                 const part = this.parts[i];
 
                 Vertex.TranslateInPlace(part.vertices, this.velocity);
+                Vector.TranslateInPlace(part.extraPoints, this.velocity);
 
                 if (i > 0) {
                     part.position.x += this.velocity.x;
@@ -512,6 +520,7 @@ namespace contraption {
 
                 if (this.angularVelocity !== 0) {
                     Vertex.RotateInPlace(part.vertices, this.angularVelocity, this.position);
+                    Vector.RotateInPlace(part.extraPoints, this.angularVelocity, this.position);
                     Axes.RotateInPlace(part.axes, this.angularVelocity);
                     if (i > 0) {
                         Vector.RotateAroundToRef(part.position, this.angularVelocity, this.position, part.position);

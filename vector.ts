@@ -112,6 +112,93 @@ namespace contraption {
             return Math.atan2(vecB.y - vecA.y, vecB.x - vecA.x);
         }
 
+        static TranslateInPlace(verts: Vector[], vec: Vector, scalar?: number): Vector[] {
+            scalar = typeof scalar !== 'undefined' ? scalar : 1;
+
+            const dx = vec.x * scalar;
+            const dy = vec.y * scalar;
+
+            for (let i = 0; i < verts.length; ++i) {
+                verts[i].x += dx;
+                verts[i].y += dy;
+            }
+
+            return verts;
+        }
+
+        static RotateInPlace(verts: Vector[], angle: number, point: Vector): Vector[] {
+            if (angle === 0) return verts;
+
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            for (let i = 0; i < verts.length; ++i) {
+                const vert = verts[i];
+                const dx = vert.x - point.x;
+                const dy = vert.y - point.y;
+                vert.x = point.x + (dx * cos - dy * sin);
+                vert.y = point.y + (dx * sin + dy * cos);
+            }
+
+            return verts;
+        }
+
+        static ScaleInPlace(verts: Vector[], scaleX: number, scaleY: number, point?: Vector): Vector[] {
+            if (scaleX === 1 && scaleY === 1) return verts;
+
+            point = point || Vector.Centroid(verts);
+
+            const delta = new Vector();
+
+            for (let i = 0; i < verts.length; ++i) {
+                const vert = verts[i];
+                Vector.SubToRef(vert, point, delta);
+                vert.x = point.x + delta.x * scaleX;
+                vert.y = point.y + delta.y * scaleY;
+            }
+
+            return verts;
+        }
+
+        static Centroid(verts: Vector[]): Vector {
+            const area = Vector.Area(verts);
+            const center = new Vector();
+
+            for (let i = 0; i < verts.length; ++i) {
+                const j = (i + 1) % verts.length;
+                const cross = Vector.Cross(verts[i], verts[j]);
+                const temp = Vector.MulToRef(Vector.AddToRef(verts[i], verts[j]), cross);
+                Vector.AddToRef(center, temp, center);
+            }
+
+            return Vector.DivToRef(center, 6 * area);
+        }
+
+        static Average(verts: Vector[]): Vector {
+            const avg = new Vector();
+
+            for (let i = 0; i < verts.length; ++i) {
+                avg.x += verts[i].x;
+                avg.y += verts[i].y;
+            }
+
+            return Vector.DivToRef(avg, verts.length);
+        }
+
+        static Area(verts: Vector[], signed?: boolean): number {
+            let area = 0, j = verts.length - 1;
+
+            for (let i = 0; i < verts.length; ++i) {
+                area += (verts[j].x - verts[i].x) * (verts[j].y + verts[i].y);
+                j = i;
+            }
+
+            if (signed)
+                return area / 2;
+
+            return Math.abs(area) / 2;
+        }
+
         // Similar to https://www.nayuki.io/res/convex-hull-algorithm/convex-hull.ts
         static Hull(vertices: Vector[]): Vector[] {
             const upper: Vector[] = [];
