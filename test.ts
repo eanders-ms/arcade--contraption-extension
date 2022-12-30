@@ -9,7 +9,7 @@ const engine = new contraption.Engine({
 runner.start(engine);
 
 for (let x = 12; x < screen.width - 20; x += 20) {
-    for (let y = 0; y < screen.height / 4; y += 12) {
+    for (let y = -50; y < 0; y += 12) {
         if (Math.random() > 0.5) {
             const body = contraption.Bodies.CreateRectangle(x, y, 3 + Math.random() * 10, 3 + Math.random() * 10, { restitution: .6 });
             engine.world.addBody(body);

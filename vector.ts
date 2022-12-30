@@ -111,5 +111,49 @@ namespace contraption {
         static Angle(vecA: Vector, vecB: Vector): number {
             return Math.atan2(vecB.y - vecA.y, vecB.x - vecA.x);
         }
+
+        // Similar to https://www.nayuki.io/res/convex-hull-algorithm/convex-hull.ts
+        static Hull(vertices: Vector[]): Vector[] {
+            const upper: Vector[] = [];
+            const lower: Vector[] = [];
+
+            // sort vertices on x-axis (y-axis for ties)
+            vertices = vertices.slice(0);
+            vertices.sort(function (vertexA, vertexB) {
+                const dx = vertexA.x - vertexB.x;
+                return dx !== 0 ? dx : vertexA.y - vertexB.y;
+            });
+
+            // build lower hull
+            for (let i = 0; i < vertices.length; i += 1) {
+                const vertex = vertices[i];
+
+                while (lower.length >= 2
+                    && Vector.Cross3(lower[lower.length - 2], lower[lower.length - 1], vertex) <= 0) {
+                    lower.pop();
+                }
+
+                lower.push(vertex);
+            }
+
+            // build upper hull
+            for (let i = vertices.length - 1; i >= 0; i -= 1) {
+                const vertex = vertices[i];
+
+                while (upper.length >= 2
+                    && Vector.Cross3(upper[upper.length - 2], upper[upper.length - 1], vertex) <= 0) {
+                    upper.pop();
+                }
+
+                upper.push(vertex);
+            }
+
+            // concatenation of the lower and upper hulls gives the convex hull
+            // omit last points because they are repeated at the beginning of the other list
+            upper.pop();
+            lower.pop();
+
+            return upper.concat(lower);
+        }
     }
 }
