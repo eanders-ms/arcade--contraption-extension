@@ -45,12 +45,16 @@ namespace contraption {
 
         // @returns `stop` method
         start(engine: Engine): () => void {
+            const ev = control.pushEventContext();
             const tick = () => this.tick(engine);
-            const updateCb = control.eventContext().registerFrameHandler(scene.PHYSICS_PRIORITY, () => this.tick(engine));
-            const renderCb = control.eventContext().registerFrameHandler(scene.RENDER_SPRITES_PRIORITY, () => this.render(engine));
+            const updateCb = ev.registerFrameHandler(scene.PHYSICS_PRIORITY, () => this.tick(engine));
+            const renderCb = ev.registerFrameHandler(scene.RENDER_SPRITES_PRIORITY, () => this.render(engine));
+            const diagsCb = ev.registerFrameHandler(scene.RENDER_DIAGNOSTICS_PRIORITY, () => this.renderDiags(engine));
+            const screenCb = ev.registerFrameHandler(scene.UPDATE_SCREEN_PRIORITY, control.__screen.update);
             return () => {
-                control.eventContext().unregisterFrameHandler(updateCb);
-                control.eventContext().unregisterFrameHandler(renderCb);
+                ev.unregisterFrameHandler(updateCb);
+                ev.unregisterFrameHandler(renderCb);
+                ev.unregisterFrameHandler(screenCb);
             }
         }
 
@@ -99,6 +103,7 @@ namespace contraption {
         }
 
         render(engine: Engine) {
+            screen.fill(0);
             const bodies = engine.world.allBodies();
 
             for (let i = 0; i < bodies.length; ++i) {
@@ -113,6 +118,16 @@ namespace contraption {
 
                     screen.drawLine(vertA.x, vertA.y, vertB.x, vertB.y, color);
                 }
+            }
+        }
+
+        renderDiags(engine: Engine) {
+            if (control.EventContext.onStats) {
+                control.EventContext.onStats(
+                    control.EventContext.lastStats +
+                    ` bodies:${engine.world.allBodies().length}` +
+                    ` physics:${(engine.timing.lastElapsed * 1000) | 0}ms`
+                );
             }
         }
     }
