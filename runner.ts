@@ -51,6 +51,7 @@ namespace contraption {
             return () => {
                 ev.unregisterFrameHandler(updateCb);
                 ev.unregisterFrameHandler(renderCb);
+                ev.unregisterFrameHandler(diagsCb);
                 ev.unregisterFrameHandler(screenCb);
             }
         }
