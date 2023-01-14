@@ -6,7 +6,6 @@ namespace contraption {
     };
 
     export class Runner {
-
         fps: number;
         delta: number;
         deltaMin: number;
@@ -28,11 +27,9 @@ namespace contraption {
 
             this.fps = options.fps;
             this.isFixed = options.isFixed;
-
             this.delta = 1000 / this.fps;
             this.deltaMin = this.delta;
             this.deltaMax = 1000 / (this.fps * 0.5);
-
             this.correction = 1;
             this.deltaSampleSize = 60;
             this.counterTimestamp = 0;
